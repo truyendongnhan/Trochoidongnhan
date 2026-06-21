@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "System administrator representation",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Admin email"
+        }
+      },
+      "required": ["email"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "Represents a user account in the system, detailing roles and moderation status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Display name of the user" },
+        "photoURL": { "type": "string", "description": "URL of user-uploaded profile picture" },
+        "role": { "type": "string", "description": "User tier: member, support, admin" },
+        "banInfo": { "type": "object", "description": "User moderation status" },
+        "kimNgoc": { "type": "number", "description": "Dư lượng Kim Ngọc - Premium Currency of the user" },
+        "createdAt": { "type": "number", "description": "Registration/first sync timestamp" },
+        "updatedAt": { "type": "number", "description": "Profile modification timestamp" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "CustomWorld": {
+      "title": "Custom World",
+      "description": "User or Admin generated custom worlds from original franchises",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the world" },
+        "name": { "type": "string", "description": "The name of the world" },
+        "type": { "type": "string", "description": "World type category (anime, xianxia, etc)" },
+        "description": { "type": "string", "description": "General description" },
+        "settingDetails": { "type": "string", "description": "In-depth details of world settings" },
+        "majorFactions": { "type": "array", "description": "Key major factions" },
+        "image": { "type": "string", "description": "URL for background display image" },
+        "powerSystem": { "type": "string", "description": "System of power (chakra, mana, qi)" },
+        "currencyName": { "type": "string", "description": "Currency used in this world" },
+        "baseStats": { "type": "array", "description": "Basic status names" },
+        "backgrounds": { "type": "array", "description": "Custom backgrounds" },
+        "powers": { "type": "array", "description": "Special starting powers" },
+        "isHidden": { "type": "boolean", "description": "Whether the world is hidden" },
+        "createdBy": { "type": "string", "description": "The user ID of the creator" },
+        "createdAt": { "type": "number", "description": "Timestamp when world was added" }
+      },
+      "required": ["id", "name", "type", "description"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "The parent document of a novel/RPG session containing story and character sheet",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique project identifier" },
+        "userId": { "type": "string", "description": "The user ID who owns this project" },
+        "worldId": { "type": "string", "description": "The ID of the world this project runs in" },
+        "character": { "type": "object", "description": "The complete Character model details" },
+        "story": { "type": "object", "description": "The Story settings" },
+        "chaptersCount": { "type": "number", "description": "Denormalized count of chapters in the subcollection" },
+        "updatedAt": { "type": "number", "description": "Timestamp of the last edit" }
+      },
+      "required": ["id", "userId", "worldId", "character", "story", "updatedAt"]
+    },
+    "Chapter": {
+      "title": "Chapter",
+      "description": "A single written chapter inside a project's chapters subcollection",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique chapter identifier" },
+        "title": { "type": "string", "description": "Title of the chapter" },
+        "content": { "type": "string", "description": "AI-generated text content for the chapter" },
+        "choices": { "type": "array", "description": "List of three direction selections (choices) for the next chapter" },
+        "createdAt": { "type": "number", "description": "Timestamp of creation" }
+      },
+      "required": ["id", "title", "content", "createdAt"]
+    },
+    "PublishedNovel": {
+      "title": "Published Novel",
+      "description": "A player published novel with status validation metrics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique published novel ID" },
+        "projectId": { "type": "string", "description": "The original user's private project ID" },
+        "userId": { "type": "string", "description": "Creator's auth ID" },
+        "userEmail": { "type": "string", "description": "Creator's email" },
+        "worldId": { "type": "string", "description": "World ID" },
+        "title": { "type": "string", "description": "Title of the novel" },
+        "summary": { "type": "string", "description": "Summary of the novel" },
+        "characterName": { "type": "string", "description": "Protagonist character name" },
+        "powerSystem": { "type": "string", "description": "Name of the power mechanics" },
+        "status": { "type": "string", "description": "Validation status: pending, approved, rejected" },
+        "createdAt": { "type": "number", "description": "Timestamp of initial publish status" },
+        "updatedAt": { "type": "number", "description": "Timestamp of last edit" }
+      },
+      "required": ["id", "projectId", "userId", "userEmail", "worldId", "title", "summary", "characterName", "status"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Global collection mapping authorized administrator IDs"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "System-wide user metadata and permission records"
+    },
+    "/customWorlds/{worldId}": {
+      "schema": "CustomWorld",
+      "description": "Global user-submitted worlds collection analyzed by the Gemini model"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Primary user-authored novel projects mapping ownership and character stats"
+    },
+    "/projects/{projectId}/chapters/{chapterId}": {
+      "schema": "Chapter",
+      "description": "Unbounded subcollection holding individual novel chapter stories for a specific project"
+    },
+    "/publishedNovels/{novelId}": {
+      "schema": "PublishedNovel",
+      "description": "Public archive of user-published fanfiction novel metadata"
+    },
+    "/publishedNovels/{novelId}/chapters/{chapterId}": {
+      "schema": "Chapter",
+      "description": "Public copy of original chapters for reader access"
+    }
+  }
+}

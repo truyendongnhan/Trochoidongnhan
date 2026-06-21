@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Hệ Thống Đồng Nhân",
+  "description": "Ứng dụng viết tiểu thuyết đồng nhân kết hợp yếu tố RPG, cho phép bạn thiết kế nhân vật, quản lý sức mạnh và sáng tác cốt truyện đa thế giới.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

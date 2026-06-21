@@ -1,0 +1,204 @@
+rules_version = '2';
+service cloudfirestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email in ['hogiakhiem9@gmail.com', 'taigamehanquoc9@gmail.com'] && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isSupport() {
+      return isSignedIn() && (
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'support')
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity Validations
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'userId', 'worldId', 'character', 'story', 'updatedAt'])
+        && data.keys().size() <= 10
+        && data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.worldId is string && data.worldId.size() <= 128
+        && data.character is map
+        && data.character.name is string && data.character.name.size() <= 200
+        && data.story is map
+        && data.updatedAt is int;
+    }
+
+    function isValidChapter(data) {
+      return data.keys().hasAll(['id', 'title', 'content', 'createdAt'])
+        && data.keys().size() <= 6
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 500
+        && data.content is string && data.content.size() <= 100000
+        && data.createdAt is int;
+    }
+
+    function isValidCustomWorld(data) {
+      return data.keys().hasAll(['id', 'name', 'type', 'description'])
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && data.type is string && data.type.size() <= 100
+        && data.description is string && data.description.size() <= 4000;
+    }
+
+    function isValidPublishedNovel(data) {
+      return data.keys().hasAll(['id', 'projectId', 'userId', 'userEmail', 'worldId', 'title', 'summary', 'characterName', 'powerSystem', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().size() <= 15
+        && data.id is string && data.id.size() <= 128
+        && data.projectId is string && data.projectId.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.userEmail is string
+        && data.worldId is string && data.worldId.size() <= 128
+        && data.title is string && data.title.size() <= 500
+        && data.summary is string && data.summary.size() <= 4000
+        && data.characterName is string && data.characterName.size() <= 200
+        && data.powerSystem is string && data.powerSystem.size() <= 200
+        && data.status is string && data.status in ['pending', 'approved', 'rejected']
+        && data.createdAt is int
+        && data.updatedAt is int;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role'])
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 200
+        && data.role is string && data.role in ['member', 'support', 'admin']
+        && (!data.keys().hasAny(['kimNgoc']) || (data.kimNgoc is int && data.kimNgoc >= 0));
+    }
+
+    // Collection routing Rules
+
+    // 1. Admins
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId);
+      allow list: if isSignedIn();
+      allow write: if false; // Pre-seeded or direct Cloud Console operation only
+    }
+
+    // 1.1 Users
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isSupport());
+      allow list: if isSignedIn() && isSupport();
+      allow create: if isSignedIn() && isValidId(userId) && (
+        (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'member')
+        || isAdmin()
+      );
+      allow update: if isSignedIn() && isValidId(userId) && (
+        // Users can edit their own profiles, but CANNOT modify their role or banInfo
+        (isOwner(userId) && isValidUser(request.resource.data)
+          && request.resource.data.role == resource.data.role
+          && (!resource.data.keys().hasAny(['banInfo']) || request.resource.data.banInfo == resource.data.banInfo)
+        )
+        // Admin can edit anything (including role/ban status)
+        || isAdmin()
+        // Support can edit ban status but CANNOT change role
+        || (isSupport() && isValidUser(request.resource.data)
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.email == resource.data.email
+        )
+      );
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 2. Custom Worlds
+    match /customWorlds/{worldId} {
+      allow get: if isSignedIn() && isValidId(worldId) && (resource.data.isHidden == false || isAdmin());
+      // Query Enforcer patterns for listing custom worlds
+      allow list: if isSignedIn() && (resource.data.isHidden == false || isAdmin());
+      
+      allow create: if isAdmin() && isValidId(worldId) && isValidCustomWorld(request.resource.data);
+      allow update: if isAdmin() && isValidId(worldId) && isValidCustomWorld(request.resource.data);
+      allow delete: if isAdmin() && isValidId(worldId);
+    }
+
+    // 3. User Projects
+    match /projects/{projectId} {
+      allow get: if isSignedIn() && isValidId(projectId) && resource.data.userId == request.auth.uid;
+      // Query Enforcer: Projects must be queried filtering strictly for owner mapping
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidId(projectId) && isValidProject(request.resource.data);
+      allow update: if isSignedIn() && isValidId(projectId) && isValidProject(request.resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.worldId == resource.data.worldId;
+      allow delete: if isSignedIn() && isValidId(projectId) && resource.data.userId == request.auth.uid;
+
+      // Unbounded Nested Chapters Subcollection (Master Gate sync pattern)
+      match /chapters/{chapterId} {
+        allow get: if isSignedIn() && isValidId(chapterId) && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+        allow list: if isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+        
+        allow create: if isSignedIn() && isValidId(chapterId) && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid && isValidChapter(request.resource.data);
+        allow update: if isSignedIn() && isValidId(chapterId) && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid && isValidChapter(request.resource.data)
+          && request.resource.data.id == resource.data.id;
+        allow delete: if isSignedIn() && isValidId(chapterId) && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+      }
+    }
+
+    // 4. Published Novels
+    match /publishedNovels/{novelId} {
+      allow get: if isSignedIn() && isValidId(novelId) && (resource.data.status == 'approved' || resource.data.userId == request.auth.uid || isSupport());
+      allow list: if isSignedIn() && (resource.data.status == 'approved' || resource.data.userId == request.auth.uid || isSupport());
+      
+      allow create: if isSignedIn() && isValidId(novelId) && isValidPublishedNovel(request.resource.data) && request.resource.data.status == 'pending';
+      allow update: if isSignedIn() && isValidId(novelId) && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId && request.resource.data.status == 'pending') 
+        || isSupport()
+      );
+      allow delete: if isSignedIn() && isValidId(novelId) && (resource.data.userId == request.auth.uid || isSupport());
+
+      match /chapters/{chapterId} {
+        allow get: if isSignedIn() && isValidId(chapterId) && (
+          get(/databases/$(database)/documents/publishedNovels/$(novelId)).data.status == 'approved' 
+          || get(/databases/$(database)/documents/publishedNovels/$(novelId)).data.userId == request.auth.uid 
+          || isSupport()
+        );
+        allow list: if isSignedIn() && (
+          get(/databases/$(database)/documents/publishedNovels/$(novelId)).data.status == 'approved' 
+          || get(/databases/$(database)/documents/publishedNovels/$(novelId)).data.userId == request.auth.uid 
+          || isSupport()
+        );
+
+        allow create: if isSignedIn() && isValidId(chapterId) && (
+          get(/databases/$(database)/documents/publishedNovels/$(novelId)).data.userId == request.auth.uid 
+          || isSupport()
+        ) && isValidChapter(request.resource.data);
+        
+        allow update: if isSignedIn() && isValidId(chapterId) && (
+          get(/databases/$(database)/documents/publishedNovels/$(novelId)).data.userId == request.auth.uid 
+          || isSupport()
+        ) && isValidChapter(request.resource.data);
+        
+        allow delete: if isSignedIn() && isValidId(chapterId) && (
+          get(/databases/$(database)/documents/publishedNovels/$(novelId)).data.userId == request.auth.uid 
+          || isSupport()
+        );
+      }
+    }
+  }
+}
