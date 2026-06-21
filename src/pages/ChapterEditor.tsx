@@ -3,13 +3,11 @@ import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Save, ArrowLeft, Send, Sparkles, Loader2 } from 'lucide-react';
 import { WORLDS } from '../data/worlds';
-import { auth } from '../lib/firebase';
-import { updateUserKimNgoc } from '../lib/firestoreSync';
 
 export default function ChapterEditor() {
   const { chapterId } = useParams();
   const navigate = useNavigate();
-  const { currentWorldId, chapters, addChapter, character, story, customWorlds, currentUserProfile } = useStore();
+  const { currentWorldId, chapters, addChapter, character, story, customWorlds } = useStore();
   
   const [loading, setLoading] = useState(false);
   const [customInput, setCustomInput] = useState('');
@@ -56,13 +54,6 @@ export default function ChapterEditor() {
       };
       
       addChapter(newChap);
-      
-      // Reward 50 Kim Ngọc for writing a new chapter
-      if (auth.currentUser) {
-        updateUserKimNgoc(auth.currentUser.uid, 50, currentUserProfile?.kimNgoc ?? 0)
-          .catch(err => console.error("Lỗi khi cộng Kim Ngọc cho chương mới:", err));
-      }
-      
       navigate(`/editor/${newChap.id}`);
       setCustomInput('');
     } catch (error) {

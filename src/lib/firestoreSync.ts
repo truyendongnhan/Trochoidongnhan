@@ -300,7 +300,6 @@ export async function syncUserProfile(firebaseUser: any) {
     photoURL: firebaseUser.photoURL || '',
     role: isAdminEmail ? 'admin' : 'member',
     banInfo: { isBanned: false, reason: '', bannedUntil: 0 },
-    kimNgoc: 500, // Welcome gift of 500 Kim Ngọc
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -313,26 +312,11 @@ export async function syncUserProfile(firebaseUser: any) {
       return fallbackProfile;
     } else {
       const existingData = userSnap.data();
-      let needsUpdating = false;
-      const updateData: any = {};
-      
       if (isAdminEmail && existingData.role !== 'admin') {
-        updateData.role = 'admin';
-        existingData.role = 'admin';
-        needsUpdating = true;
-      }
-      
-      if (existingData.kimNgoc === undefined) {
-        updateData.kimNgoc = 500;
-        existingData.kimNgoc = 500;
-        needsUpdating = true;
-      }
-      
-      if (needsUpdating) {
-        updateData.updatedAt = Date.now();
+        const updateData = { role: 'admin', updatedAt: Date.now() };
         await setDoc(userRef, updateData, { merge: true });
+        existingData.role = 'admin';
       }
-      
       return {
         ...existingData,
         uid: firebaseUser.uid,
@@ -350,23 +334,5 @@ export async function syncUserProfile(firebaseUser: any) {
     // Otherwise log normally but still return fallback to guarantee app resilience
     console.warn("Firestore syncUserProfile failed. Falling back to safe offline profile:", err);
     return fallbackProfile;
-  }
-}
-
-/**
- * Updates a user's Kim Ngọc balance directly in Firestore.
- */
-export async function updateUserKimNgoc(userId: string, changeAmount: number, currentKimNgoc: number = 0) {
-  const userRef = doc(db, 'users', userId);
-  const newKimNgoc = Math.max(0, currentKimNgoc + changeAmount);
-  try {
-    await setDoc(userRef, {
-      kimNgoc: newKimNgoc,
-      updatedAt: Date.now()
-    }, { merge: true });
-    return newKimNgoc;
-  } catch (err) {
-    console.error("Failed to update user's Kim Ngọc balance:", err);
-    throw err;
   }
 }

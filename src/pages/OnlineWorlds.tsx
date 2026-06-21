@@ -4,9 +4,8 @@ import { useStore } from '../store/useStore';
 import { WORLDS } from '../data/worlds';
 import { World, PublishedNovel, Chapter, getRarityColor } from '../types';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '../lib/firebase';
-import { getPublishedNovelChaptersFromFirestore, updateUserKimNgoc } from '../lib/firestoreSync';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth } from '../lib/firebase';
+import { getPublishedNovelChaptersFromFirestore } from '../lib/firestoreSync';
 import { 
   Globe, 
   Search, 
@@ -28,7 +27,7 @@ import {
 export default function OnlineWorlds() {
   const navigate = useNavigate();
   const [user] = useAuthState(auth);
-  const { customWorlds, setWorld, deleteCustomWorld, publishedNovels, currentUserProfile } = useStore();
+  const { customWorlds, setWorld, deleteCustomWorld, publishedNovels } = useStore();
   
   // Design tab or view mode: worlds (Destinations) or novels (Reader Library)
   const [viewMode, setViewMode] = useState<'worlds' | 'novels'>('worlds');
@@ -46,53 +45,6 @@ export default function OnlineWorlds() {
   const [novelChapters, setNovelChapters] = useState<Chapter[]>([]);
   const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
-  const [isTipping, setIsTipping] = useState(false);
-
-  const handleTipAuthor = async (amount: number) => {
-    if (!user) {
-      alert("Vui lòng đăng nhập để tặng Kim Ngọc!");
-      return;
-    }
-    
-    if (!readingNovel) return;
-    
-    const balance = currentUserProfile?.kimNgoc ?? 0;
-    if (balance < amount) {
-      alert(`Đồng đạo không đủ Kim Ngọc! Số dư hiện tại là: ${balance} KN. Hãy điểm danh hấp thu linh khí trong Hồ Sơ.`);
-      return;
-    }
-    
-    if (readingNovel.userId === user.uid) {
-      alert("Đạo hữu không thể tự tặng quà cho chính mình.");
-      return;
-    }
-
-    setIsTipping(true);
-    try {
-      // 1. Deduct from sender
-      await updateUserKimNgoc(user.uid, -amount, balance);
-      
-      // 2. Fetch and add to recipient
-      const authorRef = doc(db, 'users', readingNovel.userId);
-      const authorSnap = await getDoc(authorRef);
-      let authorCurrentKimNgoc = 0;
-      if (authorSnap.exists()) {
-        authorCurrentKimNgoc = authorSnap.data().kimNgoc ?? 0;
-      }
-      
-      await setDoc(authorRef, {
-        kimNgoc: authorCurrentKimNgoc + amount,
-        updatedAt: Date.now()
-      }, { merge: true });
-      
-      alert(`Khánh điển! Đồng đạo đã hào phóng tặng ${amount} Kim Ngọc để cổ vũ tinh thần của đạo hữu ${readingNovel.userEmail.split('@')[0]}!`);
-    } catch (err) {
-      console.error("Lỗi khi tặng Kim Ngọc:", err);
-      alert("Đường truyền linh khí trục trặc, tặng quà thất bại.");
-    } finally {
-      setIsTipping(false);
-    }
-  };
 
   // Prepare lists
   const systemWorldsList = Object.values(WORLDS);
@@ -620,31 +572,6 @@ export default function OnlineWorlds() {
                 Nhân vật: {readingNovel.characterName}
               </div>
             </div>
-
-            {/* Tipping Section */}
-            {user && readingNovel.userId !== user?.uid && (
-              <div className="p-4 bg-slate-950 border-t border-b border-slate-850 space-y-2 relative overflow-hidden shrink-0">
-                <div className="flex items-center gap-1.5 z-10 relative">
-                  <span className="text-sm">💎</span>
-                  <span className="text-[9px] tracking-wider font-extrabold uppercase text-amber-500">Ủng Hộ Kim Ngọc</span>
-                </div>
-                <p className="text-[10px] text-slate-400 font-serif leading-relaxed z-10 relative normal-case font-normal">
-                  Dành tặng linh thạch cổ vũ tâm huyết sáng tạo dị bản của tác giả.
-                </p>
-                <div className="grid grid-cols-4 gap-1.5 pt-1 z-10 relative">
-                  {[50, 100, 200, 500].map(val => (
-                    <button
-                      key={val}
-                      disabled={isTipping}
-                      onClick={() => handleTipAuthor(val)}
-                      className="bg-slate-900 border border-amber-500/20 hover:border-amber-500 text-amber-450 hover:text-slate-950 hover:bg-amber-500 text-[10px] font-mono font-bold py-1 px-1 rounded transition-colors duration-200 cursor-pointer disabled:opacity-45"
-                    >
-                      +{val}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Chapters list index */}
             <div className="overflow-y-auto flex-1 p-3">

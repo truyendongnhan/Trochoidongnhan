@@ -23,7 +23,6 @@
         "photoURL": { "type": "string", "description": "URL of user-uploaded profile picture" },
         "role": { "type": "string", "description": "User tier: member, support, admin" },
         "banInfo": { "type": "object", "description": "User moderation status" },
-        "kimNgoc": { "type": "number", "description": "Dư lượng Kim Ngọc - Premium Currency of the user" },
         "createdAt": { "type": "number", "description": "Registration/first sync timestamp" },
         "updatedAt": { "type": "number", "description": "Profile modification timestamp" }
       },

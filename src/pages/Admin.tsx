@@ -109,17 +109,11 @@ function UsersManager() {
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'users'));
+    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list: any[] = [];
       snapshot.forEach((doc) => {
         list.push(doc.data());
-      });
-      // Sort client-side safely to prevent exclusion of documents missing 'createdAt'
-      list.sort((a, b) => {
-        const timeA = a.createdAt || a.updatedAt || 0;
-        const timeB = b.createdAt || b.updatedAt || 0;
-        return timeB - timeA;
       });
       setUsersList(list);
       setLoading(false);

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, signInWithGoogle, logout, db } from '../lib/firebase';
+import { auth, signInWithGoogle, logout } from '../lib/firebase';
 import { updateProfile } from 'firebase/auth';
 import { useStore } from '../store/useStore';
-import { LogOut, User, BookOpen, Star, Clock, Edit2, Check, X as XIcon, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { LogOut, User, BookOpen, Star, Clock, Edit2, Check, X as XIcon, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { doc, setDoc } from 'firebase/firestore';
 
 const obfuscateEmail = (email: string | null) => {
   if (!email) return '';
@@ -18,61 +17,13 @@ const obfuscateEmail = (email: string | null) => {
 
 export default function Profile() {
   const [user, loading] = useAuthState(auth);
-  const { projects, currentUserProfile } = useStore();
+  const { projects } = useStore();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPhotoUrl, setEditPhotoUrl] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const [checkInCooldown, setCheckInCooldown] = useState('');
-  const [isCheckInLoading, setIsCheckInLoading] = useState(false);
-
-  const lastCheckIn = currentUserProfile?.lastCheckIn || 0;
-  const cooldownPeriod = 24 * 60 * 60 * 1000;
-  const nextCheckInTime = lastCheckIn + cooldownPeriod;
-
-  useEffect(() => {
-    const updateCooldown = () => {
-      const remaining = nextCheckInTime - Date.now();
-      if (remaining <= 0) {
-        setCheckInCooldown('');
-      } else {
-        const hours = Math.floor(remaining / (3600 * 1000));
-        const minutes = Math.floor((remaining % (3600 * 1000)) / (60 * 1000));
-        const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
-        setCheckInCooldown(`${hours}g ${minutes}p ${seconds}s`);
-      }
-    };
-
-    updateCooldown();
-    const interval = setInterval(updateCooldown, 1000);
-    return () => clearInterval(interval);
-  }, [nextCheckInTime]);
-
-  const handleDailyCheckIn = async () => {
-    if (!user) return;
-    setIsCheckInLoading(true);
-    try {
-      const currentBalance = currentUserProfile?.kimNgoc ?? 0;
-      const amountToAward = 100;
-      
-      const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, {
-        kimNgoc: currentBalance + amountToAward,
-        lastCheckIn: Date.now(),
-        updatedAt: Date.now()
-      }, { merge: true });
-      
-      alert(`Chúc mừng đồng đạo đã hấp thu linh khí thành công, tích lũy thêm ${amountToAward} Kim Ngọc!`);
-    } catch (error) {
-      console.error("Lỗi khi điểm danh nhận Kim Ngọc:", error);
-      alert("Hấp thu thất bại, vui lòng thử lại sau.");
-    } finally {
-      setIsCheckInLoading(false);
-    }
-  };
 
   useEffect(() => {
     if (user && !isEditing) {
@@ -256,60 +207,6 @@ export default function Profile() {
                  {projects.reduce((acc, p) => acc + p.chapters.length, 0)}
                </div>
                <div className="text-[10px] tracking-widest font-bold uppercase text-slate-500">Tổng Số Chương</div>
-            </div>
-          </div>
-
-          {/* Kim Ngọc Section */}
-          <div className="mt-8 border-t border-slate-800 pt-8">
-            <div className="bg-slate-950/60 border border-amber-500/10 rounded-sm p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/[0.03] blur-3xl rounded-full"></div>
-              
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
-                <div className="space-y-2 text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">💎</span>
-                    <h3 className="text-base font-serif italic text-amber-400">Động Kim Ngọc</h3>
-                  </div>
-                  <p className="text-xs text-slate-400 leading-relaxed max-w-lg normal-case font-normal">
-                    Kim Ngọc là tinh hoa đúc kết dùng để bảo hộ duyên số hoặc gửi tặng bằng hữu như món quà tinh thần trân quý. Điểm danh hấp thu năng lượng để gia tăng vốn liếng.
-                  </p>
-                  <div className="pt-1 flex flex-wrap gap-2 text-[9px] tracking-wider font-extrabold uppercase font-sans">
-                    <span className="bg-slate-900 border border-amber-500/15 px-2.5 py-1 rounded-sm text-amber-400">
-                      Số dư: {currentUserProfile?.kimNgoc ?? 0} Kim Ngọc
-                    </span>
-                    <span className="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-sm text-slate-400">
-                      Ủng Hộ Tác Giả &bull; Cực Phẩm Triệu Hồi
-                    </span>
-                  </div>
-                </div>
-
-                <div className="w-full md:w-auto shrink-0 text-center pt-2 md:pt-0">
-                  {checkInCooldown ? (
-                    <button 
-                      disabled
-                      className="w-full md:w-auto bg-slate-950 text-slate-600 border border-slate-800 font-bold text-[10px] tracking-widest uppercase py-3 px-6 rounded-sm cursor-not-allowed"
-                    >
-                      HỒI KHÍ: {checkInCooldown}
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={handleDailyCheckIn}
-                      disabled={isCheckInLoading}
-                      className="w-full md:w-auto bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-[10px] tracking-widest uppercase py-3 px-6 rounded-sm transition-colors duration-200 shadow-md shadow-amber-950/20 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {isCheckInLoading ? (
-                        <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
-                      ) : (
-                        <>
-                          <Sparkles className="w-3.5 h-3.5" />
-                          HẤP THU LINH KHÍ (+100)
-                        </>
-                      )}
-                    </button>
-                  )}
-                  <p className="text-[9px] text-slate-500 mt-1.5 italic normal-case font-sans">Chu kỳ hồi chuyển nguyên khí là 24 giờ</p>
-                </div>
-              </div>
             </div>
           </div>
         </div>

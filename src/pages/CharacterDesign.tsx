@@ -351,7 +351,7 @@ export default function CharacterDesign() {
             
             <button 
               onClick={randomizeAllAssets}
-              className="flex items-center gap-1.5 text-[9px] bg-slate-800 hover:bg-emerald-600 border border-slate-700 hover:border-emerald-500 hover:text-black px-3.5 py-1.5 rounded-sm text-slate-300 transition-all font-extrabold tracking-wider uppercase cursor-pointer"
+              className="flex items-center gap-1.5 text-[9px] bg-slate-800 hover:bg-emerald-600 border border-slate-700 hover:border-emerald-500 hover:text-black px-3.5 py-1.5 rounded-sm text-slate-300 transition-all font-extrabold tracking-wider uppercase"
             >
               <Dices className="w-3.5 h-3.5" /> Thử Vận May Mới
             </button>

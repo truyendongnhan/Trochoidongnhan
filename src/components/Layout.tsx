@@ -32,7 +32,7 @@ function NavLinks({ activeProjectId, onClick, isAdmin }: { activeProjectId: stri
 }
 
 export default function Layout() {
-  const { activeProjectId, currentUserProfile } = useStore();
+  const { activeProjectId } = useStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, loading] = useAuthState(auth);
 
@@ -52,10 +52,6 @@ export default function Layout() {
               {!loading && (
                 user ? (
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 text-amber-400 rounded-sm font-mono text-[11px] font-bold normal-case select-none" title="Số dư Kim Ngọc">
-                      <span>💎</span>
-                      <span>{currentUserProfile?.kimNgoc ?? 0}</span>
-                    </div>
                     <Link to="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                       <img src={user.photoURL || ''} alt="avatar" className="w-6 h-6 rounded-full border border-slate-700" />
                       <span className="text-xs font-medium text-slate-300 normal-case">{user.displayName}</span>
@@ -96,16 +92,10 @@ export default function Layout() {
               {!loading && (
                 user ? (
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-sm font-mono text-[11px] font-bold normal-case select-none">
-                        <span>💎</span>
-                        <span>{currentUserProfile?.kimNgoc ?? 0} KN</span>
-                      </div>
-                      <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <img src={user.photoURL || ''} alt="avatar" className="w-6 h-6 rounded-full border border-slate-700" />
-                        <span className="text-xs font-medium text-slate-300 normal-case">{user.displayName}</span>
-                      </Link>
-                    </div>
+                    <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                      <img src={user.photoURL || ''} alt="avatar" className="w-6 h-6 rounded-full border border-slate-700" />
+                      <span className="text-xs font-medium text-slate-300 normal-case">{user.displayName}</span>
+                    </Link>
                     <button 
                       onClick={() => {
                         logout();

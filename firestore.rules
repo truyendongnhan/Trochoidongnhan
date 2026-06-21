@@ -45,7 +45,7 @@ service cloudfirestore {
         && data.character is map
         && data.character.name is string && data.character.name.size() <= 200
         && data.story is map
-        && data.updatedAt is number;
+        && data.updatedAt is int;
     }
 
     function isValidChapter(data) {
@@ -54,7 +54,7 @@ service cloudfirestore {
         && data.id is string && data.id.size() <= 128
         && data.title is string && data.title.size() <= 500
         && data.content is string && data.content.size() <= 100000
-        && data.createdAt is number;
+        && data.createdAt is int;
     }
 
     function isValidCustomWorld(data) {
@@ -78,16 +78,15 @@ service cloudfirestore {
         && data.characterName is string && data.characterName.size() <= 200
         && data.powerSystem is string && data.powerSystem.size() <= 200
         && data.status is string && data.status in ['pending', 'approved', 'rejected']
-        && data.createdAt is number
-        && data.updatedAt is number;
+        && data.createdAt is int
+        && data.updatedAt is int;
     }
 
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'email', 'role'])
         && data.uid is string && data.uid.size() <= 128
         && data.email is string && data.email.size() <= 200
-        && data.role is string && data.role in ['member', 'support', 'admin']
-        && (!data.keys().hasAny(['kimNgoc']) || (data.kimNgoc is number && data.kimNgoc >= 0));
+        && data.role is string && data.role in ['member', 'support', 'admin'];
     }
 
     // Collection routing Rules
